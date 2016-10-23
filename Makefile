@@ -13,12 +13,19 @@ LDFLAGS := -X 'main.version=$(VERSION)' \
 
 # development tasks
 PACKAGES := $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
-test:
-	go test $(PACKAGES)
+test: setupdb
+	@echo "Running tests..."
+	DB_USER=postgres DB_NAME=bw_collaborators_test go test $(PACKAGES)
 
 benchmark:
 	@echo "Running benchmarks..."
 	@go test -bench=. $(PACKAGES)
+
+setupdb:
+	@echo "Setting up test database..."
+	psql -U postgres -c "DROP DATABASE IF EXISTS bw_collaborators_test;"
+	psql -U postgres -c "CREATE DATABASE bw_collaborators_test;"
+	psql -U postgres bw_collaborators_test <testutil/schema.sql
 
 # build tasks
 SOURCES := $(shell find . -type f \( -name '*.go' -and -not -name '*_test.go' \))
@@ -31,4 +38,4 @@ all: test build
 clean:
 	go clean
 
-.PHONY: all build test benchmark clean
+.PHONY: all build test benchmark clean setupdb
