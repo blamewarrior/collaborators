@@ -1,6 +1,8 @@
 Collaborators
 ============
 
+[![Current master build status](https://travis-ci.org/blamewarrior/collaborators.svg?branch=master)](https://travis-ci.org/blamewarrior/collaborators)
+
 A service to synchronize collaborators for BlameWarrior repositories.
 
 Installation
