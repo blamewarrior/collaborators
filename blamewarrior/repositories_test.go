@@ -22,7 +22,6 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
@@ -83,33 +82,21 @@ func TestGetRepositories_OnlyTracked(t *testing.T) {
 }
 
 func setup() (db *sql.DB, teardownFn func()) {
-	connStr := "sslmode=disable"
-
-	if dbName := os.Getenv("DB_NAME"); dbName != "" {
-		connStr += " dbname=" + dbName
-	} else {
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
 		log.Fatal("missing test database name (expected to be passed via ENV['DB_NAME'])")
 	}
 
-	if user := os.Getenv("DB_USER"); user != "" {
-		connStr += " user=" + user
+	opts := &blamewarrior.DatabaseOptions{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
 	}
 
-	if password := os.Getenv("DB_PASSWORD"); password != "" {
-		connStr += " password=" + strconv.Quote(password)
-	}
-
-	if host := os.Getenv("DB_HOST"); host != "" {
-		connStr += " host=" + host
-	}
-
-	if port := os.Getenv("DB_PORT"); port != "" {
-		connStr += " port=" + port
-	}
-
-	db, err := sql.Open("postgres", connStr)
+	db, err := blamewarrior.ConnectDatabase(dbName, opts)
 	if err != nil {
-		log.Fatalf("failed to connect to db using connection string %q", connStr)
+		log.Fatalf("failed to establish connection with test db %s using connection string %s: %s", dbName, opts.ConnectionString(), err)
 	}
 
 	return db, func() {
