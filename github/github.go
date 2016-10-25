@@ -18,7 +18,75 @@
 */
 package github
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+
+	gh "github.com/google/go-github/github"
+)
+
+var (
+	ErrRateLimitReached = errors.New("GitHub API request rate limit reached")
+	ErrNoSuchRepository = errors.New("no such repository")
+)
+
+// Client wraps github.com/google/go-github/github.Client providing methods adapted
+// for BlameWarrior use cases.
+type Client struct {
+	client *gh.Client
+}
+
+// NewClient returns a new copy of github.Client that uses given http.Client
+// to make GitHub API requests.
+func NewClient(httpClient *http.Client) *Client {
+	return &Client{client: gh.NewClient(httpClient)}
+}
+
+// SetBaseURL overrides GitHub API endpoint and is intended for use in tests.
+func (c *Client) SetBaseURL(u *url.URL) {
+	c.client.BaseURL = u
+}
+
+// RepositoryCollaborators returns GitHub nicknames of collaborators of given
+// repository.
+func (c *Client) RepositoryCollaborators(repoName string) (collaborators []string, err error) {
+	owner, name := SplitRepositoryName(repoName)
+
+	opt := &gh.ListOptions{PerPage: 100}
+	for {
+		users, resp, err := c.client.Repositories.ListCollaborators(owner, name, opt)
+		if err != nil {
+			switch err.(type) {
+			case *gh.RateLimitError:
+				return nil, ErrRateLimitReached
+			case *gh.ErrorResponse:
+				apiErr := err.(*gh.ErrorResponse)
+				if apiErr.Response.StatusCode == http.StatusNotFound {
+					return nil, ErrNoSuchRepository
+				}
+			}
+
+			return nil, fmt.Errorf("request failed: %s", err)
+		}
+
+		for _, user := range users {
+			if user == nil || user.Login == nil {
+				continue
+			}
+			collaborators = append(collaborators, *user.Login)
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+
+	return collaborators, nil
+}
 
 // SplitRepositoryName splits full GitHub repository name into owner and name parts.
 func SplitRepositoryName(fullName string) (owner, repo string) {
