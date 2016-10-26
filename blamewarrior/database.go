@@ -76,5 +76,5 @@ func ConnectDatabase(dbName string, opts ...*DatabaseOptions) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to db: %s", err)
 	}
 
-	return db, nil
+	return db, db.Ping()
 }
