@@ -22,7 +22,8 @@ SET default_with_oids = false;
 CREATE TABLE github_accounts (
     id integer NOT NULL,
     uid character varying(255),
-    nickname character varying(255)
+    nickname character varying(255),
+    token character varying(255)
 );
 
 

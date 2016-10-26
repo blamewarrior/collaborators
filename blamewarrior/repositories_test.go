@@ -38,22 +38,20 @@ func TestGetRepositories_FetchRepositories(t *testing.T) {
 	_, err := db.Exec("TRUNCATE repositories;")
 	require.NoError(t, err)
 
-	r, err := db.Exec("INSERT INTO repositories (full_name, tracked) VALUES ($1, $2), ($3, $4);",
-		"user1/repo1", true,
-		"user2/repo2", true,
-	)
+	firstUserID, err := createUser("user1", "token1", db)
 	require.NoError(t, err)
+	require.NoError(t, createRepository(firstUserID, "user1/repo1", true, db))
 
-	insertedNum, err := r.RowsAffected()
+	secondUserID, err := createUser("user2", "token2", db)
 	require.NoError(t, err)
-	require.EqualValues(t, 2, insertedNum)
+	require.NoError(t, createRepository(secondUserID, "user2/repo2", true, db))
 
 	repos, err := blamewarrior.GetRepositories(db)
 	require.NoError(t, err)
 
 	assert.Len(t, repos, 2)
-	assert.Contains(t, repos, blamewarrior.Repository{FullName: "user1/repo1"})
-	assert.Contains(t, repos, blamewarrior.Repository{FullName: "user2/repo2"})
+	assert.Contains(t, repos, blamewarrior.Repository{FullName: "user1/repo1", Token: "token1"})
+	assert.Contains(t, repos, blamewarrior.Repository{FullName: "user2/repo2", Token: "token2"})
 }
 
 func TestGetRepositories_OnlyTracked(t *testing.T) {
@@ -63,16 +61,12 @@ func TestGetRepositories_OnlyTracked(t *testing.T) {
 	_, err := db.Exec("TRUNCATE repositories;")
 	require.NoError(t, err)
 
-	r, err := db.Exec("INSERT INTO repositories (full_name, tracked) VALUES ($1, $2), ($3, $4), ($5, $6);",
-		"user/tracked1", true,
-		"user/not_tracked", false,
-		"user/tracked2", true,
-	)
+	userID, err := createUser("user", "token", db)
 	require.NoError(t, err)
 
-	insertedNum, err := r.RowsAffected()
-	require.NoError(t, err)
-	require.EqualValues(t, 3, insertedNum)
+	require.NoError(t, createRepository(userID, "user/tracked1", true, db))
+	require.NoError(t, createRepository(userID, "user/not_tracked", false, db))
+	require.NoError(t, createRepository(userID, "user/tracked2", true, db))
 
 	repos, err := blamewarrior.GetRepositories(db)
 	require.NoError(t, err)
@@ -104,4 +98,14 @@ func setup() (db *sql.DB, teardownFn func()) {
 			log.Printf("failed to close database connection: %s", err)
 		}
 	}
+}
+
+func createUser(user, token string, db *sql.DB) (userId int64, err error) {
+	err = db.QueryRow("INSERT INTO github_accounts (nickname, token) VALUES ($1, $2) RETURNING id;", user, token).Scan(&userId)
+	return userId, err
+}
+
+func createRepository(userId int64, fullName string, tracked bool, db *sql.DB) error {
+	_, err := db.Exec("INSERT INTO repositories (github_account_id, full_name, tracked) VALUES ($1, $2, $3);", userId, fullName, tracked)
+	return err
 }

@@ -30,11 +30,14 @@ type Repository struct {
 	// FullName is the name of GitHub repository preceded with the name of
 	// the owner, e.g. blamewarrior/collaborators.
 	FullName string
+	// Token is an access token of the owner of this repository. This token is
+	// used to make requests to GitHub API to fetch collaborators.
+	Token string
 }
 
 // GetRepository is a method to fetch all tracked repositories from database.
 func GetRepositories(db *sql.DB) (repos []Repository, err error) {
-	rows, err := db.Query("SELECT full_name FROM repositories WHERE tracked;")
+	rows, err := db.Query("SELECT r.full_name, a.token FROM repositories AS r JOIN github_accounts AS a ON r.github_account_id = a.id WHERE r.tracked;")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch repositories: %s", err)
 	}
@@ -42,7 +45,7 @@ func GetRepositories(db *sql.DB) (repos []Repository, err error) {
 
 	for rows.Next() {
 		var repo Repository
-		if err = rows.Scan(&repo.FullName); err != nil {
+		if err = rows.Scan(&repo.FullName, &repo.Token); err != nil {
 			return nil, fmt.Errorf("failed to fetch repository: %s", err)
 		}
 
