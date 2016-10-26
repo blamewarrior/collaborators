@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "vnhyKYZEFKDT1xEOIFHDQAQp7Dw=",
+			"path": "github.com/google/go-github/github",
+			"revision": "ed33550bbf49ddffcc36e1309d3f58ed0b6c2305",
+			"revisionTime": "2016-10-19T16:00:06Z"
+		},
+		{
+			"checksumSHA1": "yyAzHoiVLu+xywYI2BDyRq6sOqE=",
+			"path": "github.com/google/go-querystring/query",
+			"revision": "9235644dd9e52eeae6fa48efd539fdc351a0af53",
+			"revisionTime": "2016-03-11T01:20:12Z"
+		},
+		{
 			"checksumSHA1": "88ochAZ1SsbAH6DgBQ5eTUChFE0=",
 			"path": "github.com/lib/pq",
 			"revision": "ae8357db35d721c58dcdc911318b55bef6b1b001",
