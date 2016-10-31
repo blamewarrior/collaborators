@@ -37,7 +37,7 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 	defer teardown()
 
 	c := github.NewClient(nil)
-	c.SetBaseURL(baseURL)
+	c.BaseURL = baseURL
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		url := baseURL.String() + "/" + req.URL.Path
@@ -64,7 +64,7 @@ func TestClient_RepositoryCollaborators_RepositoryDoesNotExist(t *testing.T) {
 	defer teardown()
 
 	c := github.NewClient(nil)
-	c.SetBaseURL(baseURL)
+	c.BaseURL = baseURL
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
@@ -79,7 +79,7 @@ func TestClient_RepositoryCollaborators_RateLimitReached(t *testing.T) {
 	defer teardown()
 
 	c := github.NewClient(nil)
-	c.SetBaseURL(baseURL)
+	c.BaseURL = baseURL
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("X-RateLimit-Limit", "1")

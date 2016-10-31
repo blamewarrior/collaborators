@@ -36,18 +36,16 @@ var (
 // Client wraps github.com/google/go-github/github.Client providing methods adapted
 // for BlameWarrior use cases.
 type Client struct {
-	client *gh.Client
+	// BaseURL overrides GitHub API endpoint and is intended for use in tests.
+	BaseURL *url.URL
+
+	httpClient *http.Client
 }
 
 // NewClient returns a new copy of github.Client that uses given http.Client
 // to make GitHub API requests.
 func NewClient(httpClient *http.Client) *Client {
-	return &Client{client: gh.NewClient(httpClient)}
-}
-
-// SetBaseURL overrides GitHub API endpoint and is intended for use in tests.
-func (c *Client) SetBaseURL(u *url.URL) {
-	c.client.BaseURL = u
+	return &Client{httpClient: httpClient}
 }
 
 // RepositoryCollaborators returns GitHub nicknames of collaborators of given
@@ -55,9 +53,13 @@ func (c *Client) SetBaseURL(u *url.URL) {
 func (c *Client) RepositoryCollaborators(repoName string) (collaborators []string, err error) {
 	owner, name := SplitRepositoryName(repoName)
 
+	httpClient := c.httpClient
+	api := gh.NewClient(httpClient)
+	api.BaseURL = c.BaseURL
+
 	opt := &gh.ListOptions{PerPage: 100}
 	for {
-		users, resp, err := c.client.Repositories.ListCollaborators(owner, name, opt)
+		users, resp, err := api.Repositories.ListCollaborators(owner, name, opt)
 		if err != nil {
 			switch err.(type) {
 			case *gh.RateLimitError:
