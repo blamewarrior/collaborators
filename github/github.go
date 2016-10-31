@@ -54,7 +54,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 // RepositoryCollaborators returns GitHub nicknames of collaborators of given
 // repository.
-func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collaborators []string, err error) {
+func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collaborators []blamewarrior.Account, err error) {
 	owner, name := SplitRepositoryName(repo.FullName)
 
 	ctx := context.Background()
@@ -91,7 +91,7 @@ func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collabor
 			if user == nil || user.Login == nil {
 				continue
 			}
-			collaborators = append(collaborators, *user.Login)
+			collaborators = append(collaborators, blamewarrior.Account{Nickname: *user.Login})
 		}
 
 		if resp.NextPage == 0 {

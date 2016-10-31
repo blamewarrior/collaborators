@@ -62,9 +62,9 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 	collaborators, err := c.RepositoryCollaborators(repo)
 	require.NoError(t, err)
 	assert.Len(t, collaborators, 3)
-	assert.Contains(t, collaborators, "user1")
-	assert.Contains(t, collaborators, "user2")
-	assert.Contains(t, collaborators, "user3")
+	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user1"})
+	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user2"})
+	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user3"})
 }
 
 func TestClient_RepositoryCollaborators_RepositoryDoesNotExist(t *testing.T) {
