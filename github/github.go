@@ -25,6 +25,9 @@ import (
 	"net/url"
 	"strings"
 
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
+
 	gh "github.com/google/go-github/github"
 )
 
@@ -50,12 +53,21 @@ func NewClient(httpClient *http.Client) *Client {
 
 // RepositoryCollaborators returns GitHub nicknames of collaborators of given
 // repository.
-func (c *Client) RepositoryCollaborators(repoName string) (collaborators []string, err error) {
+func (c *Client) RepositoryCollaborators(repoName, accessToken string) (collaborators []string, err error) {
 	owner, name := SplitRepositoryName(repoName)
 
-	httpClient := c.httpClient
+	ctx := context.Background()
+	if c.httpClient != nil {
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
+	}
+
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
+	httpClient := oauth2.NewClient(ctx, tokenSource)
+
 	api := gh.NewClient(httpClient)
-	api.BaseURL = c.BaseURL
+	if c.BaseURL != nil {
+		api.BaseURL = c.BaseURL
+	}
 
 	opt := &gh.ListOptions{PerPage: 100}
 	for {

@@ -43,6 +43,8 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 		url := baseURL.String() + "/" + req.URL.Path
 		w.Header().Set("Link", `<`+url+`?page=2>; rel="last"`)
 
+		assert.Equal(t, "Bearer token1", req.Header.Get("Authorization"))
+
 		if req.FormValue("page") != "2" {
 			w.Header().Set("Link", `<`+url+`?page=2>; rel="next", `+w.Header().Get("Link"))
 			w.Write([]byte(`[{"login":"user1"},{"login":"user2"}]`))
@@ -51,7 +53,7 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 		}
 	})
 
-	collaborators, err := c.RepositoryCollaborators("user1/repo1")
+	collaborators, err := c.RepositoryCollaborators("user1/repo1", "token1")
 	require.NoError(t, err)
 	assert.Len(t, collaborators, 3)
 	assert.Contains(t, collaborators, "user1")
@@ -70,7 +72,7 @@ func TestClient_RepositoryCollaborators_RepositoryDoesNotExist(t *testing.T) {
 		http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
 	})
 
-	_, err := c.RepositoryCollaborators("user1/repo1")
+	_, err := c.RepositoryCollaborators("user1/repo1", "token1")
 	assert.Equal(t, github.ErrNoSuchRepository, err)
 }
 
@@ -88,7 +90,7 @@ func TestClient_RepositoryCollaborators_RateLimitReached(t *testing.T) {
 		http.Error(w, `{"message":"API rate limit exceeded for 127.0.0.1"}`, http.StatusForbidden)
 	})
 
-	_, err := c.RepositoryCollaborators("user1/repo1")
+	_, err := c.RepositoryCollaborators("user1/repo1", "token1")
 	assert.Equal(t, github.ErrRateLimitReached, err)
 }
 
