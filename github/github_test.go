@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blamewarrior/collaborators/blamewarrior"
 	"github.com/blamewarrior/collaborators/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,12 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 		}
 	})
 
-	collaborators, err := c.RepositoryCollaborators("user1/repo1", "token1")
+	repo := blamewarrior.Repository{
+		FullName: "user1/repo1",
+		Token:    "token1",
+	}
+
+	collaborators, err := c.RepositoryCollaborators(repo)
 	require.NoError(t, err)
 	assert.Len(t, collaborators, 3)
 	assert.Contains(t, collaborators, "user1")
@@ -72,7 +78,12 @@ func TestClient_RepositoryCollaborators_RepositoryDoesNotExist(t *testing.T) {
 		http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
 	})
 
-	_, err := c.RepositoryCollaborators("user1/repo1", "token1")
+	repo := blamewarrior.Repository{
+		FullName: "user1/repo1",
+		Token:    "token1",
+	}
+
+	_, err := c.RepositoryCollaborators(repo)
 	assert.Equal(t, github.ErrNoSuchRepository, err)
 }
 
@@ -90,7 +101,12 @@ func TestClient_RepositoryCollaborators_RateLimitReached(t *testing.T) {
 		http.Error(w, `{"message":"API rate limit exceeded for 127.0.0.1"}`, http.StatusForbidden)
 	})
 
-	_, err := c.RepositoryCollaborators("user1/repo1", "token1")
+	repo := blamewarrior.Repository{
+		FullName: "user1/repo1",
+		Token:    "token1",
+	}
+
+	_, err := c.RepositoryCollaborators(repo)
 	assert.Equal(t, github.ErrRateLimitReached, err)
 }
 
