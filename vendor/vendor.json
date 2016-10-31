@@ -25,6 +25,24 @@
 			"path": "github.com/lib/pq/oid",
 			"revision": "ae8357db35d721c58dcdc911318b55bef6b1b001",
 			"revisionTime": "2016-10-14T01:16:34Z"
+		},
+		{
+			"checksumSHA1": "4hQNaJUg67lF/QcO0NKzUeqlaew=",
+			"path": "golang.org/x/net/context",
+			"revision": "541150ac4f433e755f5663eba5d888c2fa347343",
+			"revisionTime": "2016-10-31T06:24:04Z"
+		},
+		{
+			"checksumSHA1": "XH7CgbL5Z8COUc+MKrYqS3FFosY=",
+			"path": "golang.org/x/oauth2",
+			"revision": "25b4fb1468cb89700c7c060cb99f30581a61f5e3",
+			"revisionTime": "2016-10-25T17:59:40Z"
+		},
+		{
+			"checksumSHA1": "D3v/aqfB9swlaZcSksCoF+lbOqo=",
+			"path": "golang.org/x/oauth2/internal",
+			"revision": "25b4fb1468cb89700c7c060cb99f30581a61f5e3",
+			"revisionTime": "2016-10-25T17:59:40Z"
 		}
 	],
 	"rootPath": "github.com/blamewarrior/collaborators"
