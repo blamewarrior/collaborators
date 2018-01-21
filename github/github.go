@@ -91,7 +91,10 @@ func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collabor
 			if user == nil || user.Login == nil {
 				continue
 			}
-			collaborators = append(collaborators, blamewarrior.Account{Nickname: *user.Login})
+			collaborators = append(collaborators, blamewarrior.Account{
+				Nickname: *user.Login,
+			},
+			)
 		}
 
 		if resp.NextPage == 0 {
