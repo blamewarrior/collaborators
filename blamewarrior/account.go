@@ -19,6 +19,7 @@
 package blamewarrior
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 )
@@ -28,21 +29,21 @@ type Account struct {
 	Id         int             `json:"-"`
 	Uid        int             `json:"uid"`
 	Login      string          `json:"login"`
-	Repository string          `json:"repository"`
 	Permisions json.RawMessage `json:"permissions"`
 }
 
 type Accounts interface {
 	List(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error)
-	Add(sqlRunner SQLRunner, account *Account) (*Account, error)
-	Edit(sqlRunner SQLRunner, account *Account) error
-	Delete(sqlRunner SQLRunner, login string) error
+	Add(sqlRunner SQLRunner, repositoryFullName string, account *Account) (*Account, error)
+	Edit(sqlRunner SQLRunner, repositoryFullName string, account *Account) error
+	Delete(sqlRunner SQLRunner, repositoryFullName string, login string) error
 }
 
-type AccountsRepository struct {
+type AccountsService struct {
+	GithubRepoName string
 }
 
-func (repo *AccountsRepository) List(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error) {
+func (repo *AccountsService) List(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error) {
 	accounts := make([]Account, 0)
 	rows, err := sqlRunner.Query(GetListAccountsQuery, repositoryFullName)
 
@@ -58,7 +59,6 @@ func (repo *AccountsRepository) List(sqlRunner SQLRunner, repositoryFullName str
 			&account.Id,
 			&account.Uid,
 			&account.Login,
-			&account.Repository,
 			&account.Permisions,
 		); err != nil {
 			return nil, err
@@ -73,21 +73,30 @@ func (repo *AccountsRepository) List(sqlRunner SQLRunner, repositoryFullName str
 
 	return accounts, nil
 }
-func (repo *AccountsRepository) Add(sqlRunner SQLRunner, account *Account) (*Account, error) {
-	err := sqlRunner.QueryRow(AddAcountQuery,
+func (repo *AccountsService) Add(tx *sql.Tx, repositoryFullName string, account *Account) (*Account, error) {
+
+	err := tx.QueryRow(AddAccountQuery,
 		account.Uid,
 		account.Login,
-		account.Repository,
 		account.Permisions,
 	).Scan(&account.Id)
 
 	if err != nil {
-		return account, fmt.Errorf("failed to create account: %s", err)
+		return nil, fmt.Errorf("failed to create account: %s", err)
 	}
 
-	return account, err
+	_, err = tx.Exec(BuildCollaborationQuery,
+		repositoryFullName,
+		account.Id,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create collaboration: %s", err)
+	}
+
+	return account, nil
 }
-func (repo *AccountsRepository) Edit(sqlRunner SQLRunner, account *Account) error {
+func (repo *AccountsService) Edit(sqlRunner SQLRunner, repositoryFullName string, account *Account) error {
 	_, err := sqlRunner.Exec(EditAccountQuery,
 		account.Id,
 		account.Uid,
@@ -101,8 +110,8 @@ func (repo *AccountsRepository) Edit(sqlRunner SQLRunner, account *Account) erro
 
 	return err
 }
-func (repo *AccountsRepository) Delete(sqlRunner SQLRunner, repositoryFullName, login string) error {
-	if _, err := sqlRunner.Exec(DeleteAccountQuery, login); err != nil {
+func (repo *AccountsService) Delete(sqlRunner SQLRunner, repositoryFullName, login string) error {
+	if _, err := sqlRunner.Exec(DeleteAccountQuery, repositoryFullName, login); err != nil {
 		return fmt.Errorf("failed to delete account: %s", err)
 	}
 
@@ -111,19 +120,30 @@ func (repo *AccountsRepository) Delete(sqlRunner SQLRunner, repositoryFullName, 
 
 const (
 	GetListAccountsQuery = `
-      SELECT accounts.id, accounts.uid, accounts.login, accounts.permissions
-         FROM accounts INNER JOIN repositories ON accounts.id = repositories.account_id
+     SELECT accounts.id, accounts.uid, accounts.login, accounts.permissions
+         FROM accounts
+         INNER JOIN collaboration ON accounts.id = collaboration.account_id
+         INNER JOIN repositories ON collaboration.repository_id = repositories.id
          WHERE repositories.full_name = $1
    `
-	AddAcountQuery = `
+	AddAccountQuery = `
       INSERT INTO accounts(uid, login, permissions) VALUES ($1, $2, $3) RETURNING id
-   `
+  `
+
+	BuildCollaborationQuery = `
+    INSERT INTO collaboration (SELECT DISTINCT id, $2::int FROM repositories WHERE full_name=$1)
+  `
 
 	EditAccountQuery = `
       UPDATE accounts SET uid=$2, login=$3, permissions=$4 WHERE id=$1;
    `
 
 	DeleteAccountQuery = `
-      DELETE FROM accounts WHERE login=$1
+      WITH account AS (
+        SELECT id FROM accounts WHERE login=$2
+      )
+      DELETE FROM collaboration WHERE account_id =(
+        SELECT id from account
+      ) AND repository_id = (SELECT id FROM repositories WHERE full_name = $1 LIMIT 1)
    `
 )

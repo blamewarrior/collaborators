@@ -1,17 +1,19 @@
 CREATE TABLE repositories (
+    id SERIAL primary key,
     full_name varchar(255)
-)
+    UNIQUE (full_name)
+);
 
 CREATE TABLE collaboration (
-    repository_id integer REFERENCES repositories(id),
-    account_id integer REFERENCES accounts(id)
+    repository_id integer NOT NULL REFERENCES repositories(id),
+    account_id integer NOT NULL REFERENCES accounts(id),
+    UNIQUE (repository_id, account_id)
 );
 
 CREATE TABLE accounts (
     id SERIAL primary key,
     uid varchar(255),
     login varchar(255),
-    permissions jsonb
+    permissions jsonb,
+    UNIQUE (login)
 );
-
-ALTER TABLE repositories ADD CONSTRAINT repository_full_name_idx UNIQUE(full_name);

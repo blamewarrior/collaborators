@@ -10,6 +10,7 @@ import (
 	"github.com/blamewarrior/collaborators/blamewarrior"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddAccount(t *testing.T) {
@@ -22,7 +23,6 @@ func TestAddAccount(t *testing.T) {
 			Account: &blamewarrior.Account{
 				Uid:        123,
 				Login:      "octocat",
-				Repository: "octocat/test",
 				Permisions: json.RawMessage("{}"),
 			},
 			Err: nil,
@@ -32,11 +32,97 @@ func TestAddAccount(t *testing.T) {
 	for _, result := range results {
 		db, teardown := setup()
 
+		var repositoryId int
+		err := db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&repositoryId)
+		require.NoError(t, err)
+
 		account := result.Account
-		accountsRepository := new(blamewarrior.AccountsRepository)
-		account, err := accountsRepository.Add(db, account)
+		accountsService := new(blamewarrior.AccountsService)
+		account, err = accountsService.Add(db, "blamewarrior/repos", account)
 		assert.Equal(t, result.Err, err)
 		assert.NotEmpty(t, account.Id)
+
+		var obtainedRepositoryId, obtainedAccountId int
+		err = db.QueryRow("SELECT repository_id FROM collaboration").Scan(&obtainedRepositoryId)
+		require.NoError(t, err)
+		require.Equal(t, repositoryId, obtainedRepositoryId)
+
+		err = db.QueryRow("SELECT account_id FROM collaboration").Scan(&obtainedAccountId)
+		require.NoError(t, err)
+		require.Equal(t, account.Id, obtainedAccountId)
+		teardown()
+	}
+}
+
+func TestListAccount(t *testing.T) {
+	db, teardown := setup()
+	defer teardown()
+
+	var accountId int
+	_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
+	require.NoError(t, err)
+	err = db.QueryRow(blamewarrior.AddAccountQuery, 123, "octocat", "{}").Scan(&accountId)
+	require.NoError(t, err)
+	_, err = db.Exec(blamewarrior.BuildCollaborationQuery, "blamewarrior/repos", accountId)
+	require.NoError(t, err)
+
+	accountsService := new(blamewarrior.AccountsService)
+	accounts, err := accountsService.List(db, "blamewarrior/repos")
+	require.NoError(t, err)
+	assert.NotEmpty(t, accounts)
+}
+
+// func TestDeleteAccount(t *testing.T) {
+// 	db, teardown := setup()
+// 	defer teardown()
+
+// 	_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
+// 	require.NoError(t, err)
+// 	_, err = db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/hooks")
+// 	require.NoError(t, err)
+
+// 	_, err = db.Exec(blamewarrior.AddAccountQuery, 123, "octocat", "{}", "blamewarrior/repos")
+// 	require.NoError(t, err)
+
+// 	_, err = db.Exec(blamewarrior.AddAccountQuery, 123, "octocat", "{}", "blamewarrior/hooks")
+// 	require.NoError(t, err)
+
+// 	accountsService := new(blamewarrior.AccountsService)
+// 	err = accountsService.Delete(db, "blamewarrior/repos", "octocat")
+// 	require.NoError(t, err)
+// }
+
+func TestEditAccount(t *testing.T) {
+
+	results := []struct {
+		Account *blamewarrior.Account
+		Err     error
+	}{
+		{
+			Account: &blamewarrior.Account{
+				Uid:        126,
+				Login:      "octocat_client",
+				Permisions: json.RawMessage("{}"),
+			},
+			Err: nil,
+		},
+	}
+
+	for _, result := range results {
+		db, teardown := setup()
+
+		var accountId int
+		_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
+		require.NoError(t, err)
+		err = db.QueryRow(blamewarrior.AddAccountQuery, 123, "octocat", "{}").Scan(&accountId)
+		require.NoError(t, err)
+		_, err = db.Exec(blamewarrior.BuildCollaborationQuery, "blamewarrior/repos", accountId)
+		require.NoError(t, err)
+
+		account := result.Account
+		accountsService := new(blamewarrior.AccountsService)
+		err = accountsService.Edit(db, "blamewarrior/repos", account)
+		assert.Equal(t, result.Err, err)
 		teardown()
 	}
 }
