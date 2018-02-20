@@ -25,10 +25,12 @@ import (
 	"net/url"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
+
 	"golang.org/x/oauth2"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
+	"github.com/blamewarrior/collaborators/blamewarrior/tokens"
 	gh "github.com/google/go-github/github"
 )
 
@@ -37,37 +39,30 @@ var (
 	ErrNoSuchRepository = errors.New("no such repository")
 )
 
+type Context struct {
+	context.Context
+	// BaseURL overrides GitHub API endpoint and is intended for use in tests.
+	BaseURL *url.URL
+}
+
 // Client wraps github.com/google/go-github/github.Client providing methods adapted
 // for BlameWarrior use cases.
 type Client struct {
-	// BaseURL overrides GitHub API endpoint and is intended for use in tests.
-	BaseURL *url.URL
-
-	httpClient *http.Client
+	tokenClient tokens.Client
 }
 
-// NewClient returns a new copy of github.Client that uses given http.Client
-// to make GitHub API requests.
-func NewClient(httpClient *http.Client) *Client {
-	return &Client{httpClient: httpClient}
+func NewClient(tokenClient tokens.Client) *Client {
+	return &Client{tokenClient}
 }
 
 // RepositoryCollaborators returns GitHub nicknames of collaborators of given
 // repository.
-func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collaborators []blamewarrior.Account, err error) {
-	owner, name := SplitRepositoryName(repo.FullName)
+func (c *Client) RepositoryCollaborators(ctx Context, repoFullName string) (collaborators []blamewarrior.Account, err error) {
+	owner, name := SplitRepositoryName(repoFullName)
 
-	ctx := context.Background()
-	if c.httpClient != nil {
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
-	}
-
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: repo.Token})
-	httpClient := oauth2.NewClient(ctx, tokenSource)
-
-	api := gh.NewClient(httpClient)
-	if c.BaseURL != nil {
-		api.BaseURL = c.BaseURL
+	api, err := initAPIClient(ctx, c.tokenClient, owner)
+	if err != nil {
+		return nil, err
 	}
 
 	opt := &gh.ListOptions{PerPage: 100}
@@ -91,8 +86,11 @@ func (c *Client) RepositoryCollaborators(repo blamewarrior.Repository) (collabor
 			if user == nil || user.Login == nil {
 				continue
 			}
+
 			collaborators = append(collaborators, blamewarrior.Account{
-				Nickname: *user.Login,
+				Login:       *user.Login,
+				Uid:         *user.ID,
+				Permissions: *user.Permissions,
 			},
 			)
 		}
@@ -114,4 +112,24 @@ func SplitRepositoryName(fullName string) (owner, repo string) {
 	}
 
 	return fullName[0:sep], fullName[sep+1:]
+}
+
+func initAPIClient(ctx Context, tokenClient tokens.Client, owner string) (*gh.Client, error) {
+
+	token, err := tokenClient.GetToken(owner)
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to get token to init API client: %s", err)
+	}
+
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	oauthClient := oauth2.NewClient(ctx, tokenSource)
+
+	api := gh.NewClient(oauthClient)
+	if ctx.BaseURL != nil {
+		api.BaseURL = ctx.BaseURL
+	}
+
+	return api, nil
+
 }

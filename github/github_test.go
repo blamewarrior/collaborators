@@ -19,6 +19,7 @@
 package github_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -30,15 +31,30 @@ import (
 	"github.com/blamewarrior/collaborators/blamewarrior"
 	"github.com/blamewarrior/collaborators/github"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type tokenServiceMock struct {
+	mock.Mock
+}
+
+func (tsMock *tokenServiceMock) GetToken(nickname string) (string, error) {
+	args := tsMock.Called(nickname)
+	return args.String(0), args.Error(1)
+
+}
 
 func TestClient_RepositoryCollaborators(t *testing.T) {
 	baseURL, mux, teardown := setupAPIServer()
 	defer teardown()
 
-	c := github.NewClient(nil)
-	c.BaseURL = baseURL
+	ts := new(tokenServiceMock)
+	ts.On("GetToken", "user1").Return("token1", nil)
+
+	c := github.NewClient(ts)
+
+	ctx := github.Context{context.Background(), baseURL}
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		url := baseURL.String() + "/" + req.URL.Path
@@ -48,51 +64,53 @@ func TestClient_RepositoryCollaborators(t *testing.T) {
 
 		if req.FormValue("page") != "2" {
 			w.Header().Set("Link", `<`+url+`?page=2>; rel="next", `+w.Header().Get("Link"))
-			w.Write([]byte(`[{"login":"user1"},{"login":"user2"}]`))
+			w.Write([]byte(`[{"login":"user1", "id": 1, "permissions": {"pull": true,"push": true,"admin": false}},{"login":"user2", "id": 2, "permissions": {"pull": true,"push": true,"admin": false}}]`))
 		} else {
-			w.Write([]byte(`[{"login":"user3"}]`))
+			w.Write([]byte(`[{"login":"user3", "id": 3, "permissions": {"pull": true,"push": true,"admin": false}}]`))
 		}
 	})
 
-	repo := blamewarrior.Repository{
-		FullName: "user1/repo1",
-		Token:    "token1",
-	}
-
-	collaborators, err := c.RepositoryCollaborators(repo)
+	collaborators, err := c.RepositoryCollaborators(ctx, "user1/repo1")
 	require.NoError(t, err)
 	assert.Len(t, collaborators, 3)
-	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user1"})
-	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user2"})
-	assert.Contains(t, collaborators, blamewarrior.Account{Nickname: "user3"})
+	assert.Contains(t, collaborators, blamewarrior.Account{Login: "user1", Uid: 1, Permissions: map[string]bool{"pull": true, "push": true, "admin": false}})
+	assert.Contains(t, collaborators, blamewarrior.Account{Login: "user2", Uid: 2, Permissions: map[string]bool{"pull": true, "push": true, "admin": false}})
+	assert.Contains(t, collaborators, blamewarrior.Account{Login: "user3", Uid: 3, Permissions: map[string]bool{"pull": true, "push": true, "admin": false}})
+
+	ts.AssertExpectations(t)
 }
 
 func TestClient_RepositoryCollaborators_RepositoryDoesNotExist(t *testing.T) {
 	baseURL, mux, teardown := setupAPIServer()
 	defer teardown()
 
-	c := github.NewClient(nil)
-	c.BaseURL = baseURL
+	ts := new(tokenServiceMock)
+	ts.On("GetToken", "user1").Return("token1", nil)
+
+	c := github.NewClient(ts)
+
+	ctx := github.Context{context.Background(), baseURL}
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
 	})
 
-	repo := blamewarrior.Repository{
-		FullName: "user1/repo1",
-		Token:    "token1",
-	}
-
-	_, err := c.RepositoryCollaborators(repo)
+	_, err := c.RepositoryCollaborators(ctx, "user1/repo1")
 	assert.Equal(t, github.ErrNoSuchRepository, err)
+
+	ts.AssertExpectations(t)
 }
 
 func TestClient_RepositoryCollaborators_RateLimitReached(t *testing.T) {
 	baseURL, mux, teardown := setupAPIServer()
 	defer teardown()
 
-	c := github.NewClient(nil)
-	c.BaseURL = baseURL
+	ts := new(tokenServiceMock)
+	ts.On("GetToken", "user1").Return("token1", nil)
+
+	c := github.NewClient(ts)
+
+	ctx := github.Context{context.Background(), baseURL}
 
 	mux.HandleFunc("/repos/user1/repo1/collaborators", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("X-RateLimit-Limit", "1")
@@ -101,13 +119,11 @@ func TestClient_RepositoryCollaborators_RateLimitReached(t *testing.T) {
 		http.Error(w, `{"message":"API rate limit exceeded for 127.0.0.1"}`, http.StatusForbidden)
 	})
 
-	repo := blamewarrior.Repository{
-		FullName: "user1/repo1",
-		Token:    "token1",
-	}
-
-	_, err := c.RepositoryCollaborators(repo)
+	_, err := c.RepositoryCollaborators(ctx, "user1/repo1")
+	require.Error(t, err)
 	assert.Equal(t, github.ErrRateLimitReached, err)
+
+	ts.AssertExpectations(t)
 }
 
 func TestSplitRepositoryName(t *testing.T) {
