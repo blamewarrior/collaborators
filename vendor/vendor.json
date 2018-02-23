@@ -63,10 +63,16 @@
 			"revisionTime": "2017-12-31T12:27:32Z"
 		},
 		{
-			"checksumSHA1": "XH7CgbL5Z8COUc+MKrYqS3FFosY=",
+			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
+			"path": "golang.org/x/net/context",
+			"revision": "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb",
+			"revisionTime": "2018-02-18T17:15:52Z"
+		},
+		{
+			"checksumSHA1": "njV1GJojWGOLSQqXB34S35ct190=",
 			"path": "golang.org/x/oauth2",
-			"revision": "25b4fb1468cb89700c7c060cb99f30581a61f5e3",
-			"revisionTime": "2016-10-25T17:59:40Z"
+			"revision": "543e37812f10c46c622c9575afd7ad22f22a12ba",
+			"revisionTime": "2018-02-07T16:52:40Z"
 		},
 		{
 			"checksumSHA1": "D3v/aqfB9swlaZcSksCoF+lbOqo=",
