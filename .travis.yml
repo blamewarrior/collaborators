@@ -3,8 +3,12 @@ go:
   - 1.9.x
   - tip
 
+dist: trusty
+addons:
+  postgresql: "9.6"
+
 services:
-  - postgresql: "9.6"
+  - postgresql
 
 install:
   - go get github.com/stretchr/testify
