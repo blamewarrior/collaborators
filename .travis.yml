@@ -4,7 +4,7 @@ go:
   - tip
 
 services:
-  - postgresql
+  - postgresql: "9.6"
 
 install:
   - go get github.com/stretchr/testify
