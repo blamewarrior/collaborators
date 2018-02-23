@@ -5,7 +5,7 @@ GOVERSION := $(shell go version)
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 BUILDER := $(shell echo "`git config user.name` <`git config user.email`>")
 PKG_RELEASE ?= 1
-PROJECT_URL := "https://github.com/andrewslotin/$(NAME)"
+PROJECT_URL := "https://github.com/blamewarrior/$(NAME)"
 LDFLAGS := -X 'main.version=$(VERSION)' \
            -X 'main.buildDate=$(BUILDDATE)' \
            -X 'main.builder=$(BUILDER)' \
