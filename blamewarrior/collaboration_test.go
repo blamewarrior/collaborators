@@ -54,9 +54,9 @@ func TestRepositoryAddAccount(t *testing.T) {
 		require.NoError(t, err)
 
 		account := result.Account
-		repositoriesService := blamewarrior.NewRepositoriesService("blamewarrior/repos")
+		repositoriesService := blamewarrior.NewCollaborationService()
 
-		account, err = repositoriesService.AddAccount(db, account)
+		account, err = repositoriesService.AddAccount(db, "blamewarrior/repos", account)
 		assert.Equal(t, result.Err, err)
 		assert.NotEmpty(t, account.Id)
 
@@ -84,8 +84,8 @@ func TestRepositoryListAccount(t *testing.T) {
 	_, err = db.Exec(blamewarrior.BuildCollaborationQuery, "blamewarrior/repos", accountId)
 	require.NoError(t, err)
 
-	repositoriesService := blamewarrior.NewRepositoriesService("blamewarrior/repos")
-	accounts, err := repositoriesService.ListAccounts(db)
+	repositoriesService := blamewarrior.NewCollaborationService()
+	accounts, err := repositoriesService.ListAccounts(db, "blamewarrior/repos")
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, accounts)
@@ -114,8 +114,8 @@ func TestRepositoryDisconnectAccount(t *testing.T) {
 	_, err = db.Exec(blamewarrior.BuildCollaborationQuery, "blamewarrior/hooks", octocatTstId)
 	require.NoError(t, err)
 
-	repositoriesService := blamewarrior.NewRepositoriesService("blamewarrior/repos")
-	err = repositoriesService.DisconnectAccount(db, "octocat")
+	repositoriesService := blamewarrior.NewCollaborationService()
+	err = repositoriesService.DisconnectAccount(db, "blamewarrior/repos", "octocat")
 	require.NoError(t, err)
 
 	var collaborationCount int
@@ -159,7 +159,7 @@ func TestRepositoryEditAccount(t *testing.T) {
 		require.NoError(t, err)
 
 		account := result.Account
-		repositoriesService := blamewarrior.NewRepositoriesService("blamewarrior/repos")
+		repositoriesService := blamewarrior.NewCollaborationService()
 		err = repositoriesService.EditAccount(db, account)
 		assert.Equal(t, result.Err, err)
 		teardown()

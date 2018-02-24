@@ -55,30 +55,28 @@ type Account struct {
 	Permissions AccountPermissions `json:"permissions"`
 }
 
-type Repositories interface {
-	CreateRepository() error
-	ListAccounts(sqlRunner SQLRunner) ([]Account, error)
-	AddAccount(sqlRunner SQLRunner, account *Account) (*Account, error)
+type Collaboration interface {
+	CreateRepository(sqlRunner SQLRunner, repositoryFullName string) error
+	ListAccounts(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error)
+	AddAccount(tx *sql.Tx, repositoryFullName string, account *Account) (*Account, error)
 	EditAccount(sqlRunner SQLRunner, account *Account) error
-	DisconnectAccount(sqlRunner SQLRunner, login string) error
+	DisconnectAccount(sqlRunner SQLRunner, repositoryFullName, login string) error
 }
 
-type RepositoriesService struct {
-	repositoryFullName string
+type CollaborationService struct{}
+
+func NewCollaborationService() *CollaborationService {
+	return new(CollaborationService)
 }
 
-func NewRepositoriesService(fullName string) *RepositoriesService {
-	return &RepositoriesService{repositoryFullName: fullName}
-}
-
-func (service *RepositoriesService) CreateRepository(sqlRunner SQLRunner) error {
-	_, err := sqlRunner.Exec(CreateRepositoryQuery, service.repositoryFullName)
+func (service *CollaborationService) CreateRepository(sqlRunner SQLRunner, repositoryFullName string) error {
+	_, err := sqlRunner.Exec(CreateRepositoryQuery, repositoryFullName)
 	return err
 }
 
-func (service *RepositoriesService) ListAccounts(sqlRunner SQLRunner) ([]Account, error) {
+func (service *CollaborationService) ListAccounts(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error) {
 	accounts := make([]Account, 0)
-	rows, err := sqlRunner.Query(GetListAccountsQuery, service.repositoryFullName)
+	rows, err := sqlRunner.Query(GetListAccountsQuery, repositoryFullName)
 
 	if err != nil {
 		return nil, err
@@ -106,7 +104,7 @@ func (service *RepositoriesService) ListAccounts(sqlRunner SQLRunner) ([]Account
 
 	return accounts, nil
 }
-func (service *RepositoriesService) AddAccount(tx *sql.Tx, account *Account) (*Account, error) {
+func (service *CollaborationService) AddAccount(tx *sql.Tx, repositoryFullName string, account *Account) (*Account, error) {
 	err := tx.QueryRow("SELECT id FROM accounts WHERE login = $1 LIMIT 1", account.Login).Scan(&account.Id)
 
 	if err != nil {
@@ -128,7 +126,7 @@ func (service *RepositoriesService) AddAccount(tx *sql.Tx, account *Account) (*A
 	}
 
 	_, err = tx.Exec(BuildCollaborationQuery,
-		service.repositoryFullName,
+		repositoryFullName,
 		account.Id,
 	)
 
@@ -139,7 +137,7 @@ func (service *RepositoriesService) AddAccount(tx *sql.Tx, account *Account) (*A
 	return account, nil
 }
 
-func (service *RepositoriesService) EditAccount(sqlRunner SQLRunner, account *Account) error {
+func (service *CollaborationService) EditAccount(sqlRunner SQLRunner, account *Account) error {
 	_, err := sqlRunner.Exec(EditAccountQuery,
 		account.Id,
 		account.Uid,
@@ -153,8 +151,8 @@ func (service *RepositoriesService) EditAccount(sqlRunner SQLRunner, account *Ac
 
 	return err
 }
-func (service *RepositoriesService) DisconnectAccount(sqlRunner SQLRunner, login string) error {
-	if _, err := sqlRunner.Exec(DisconnectAccountQuery, service.repositoryFullName, login); err != nil {
+func (service *CollaborationService) DisconnectAccount(sqlRunner SQLRunner, repositoryFullName, login string) error {
+	if _, err := sqlRunner.Exec(DisconnectAccountQuery, repositoryFullName, login); err != nil {
 		return fmt.Errorf("failed to delete account: %s", err)
 	}
 
