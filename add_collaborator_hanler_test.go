@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
@@ -49,7 +50,7 @@ func TestAddCollaboratorHandler(t *testing.T) {
 	}
 
 	for _, result := range results {
-		req, err := http.NewRequest("POST", "/repositories?:owner="+result.Owner+"&:name="+result.Name, nil)
+		req, err := http.NewRequest("POST", "/repositories?:username="+result.Owner+"&:repo="+result.Name, bytes.NewBufferString(addCollaboratorRequestBody))
 		require.NoError(t, err)
 
 		w := httptest.NewRecorder()
@@ -89,3 +90,16 @@ func setup() (db *sql.DB, teardownFn func()) {
 		}
 	}
 }
+
+const (
+	addCollaboratorRequestBody = `
+		{
+			"uid": 1345,
+			"login": "blamewarrior",
+			"permissions": {
+				"admin": true
+			}
+		}
+
+	`
+)

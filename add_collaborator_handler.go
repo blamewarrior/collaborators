@@ -17,6 +17,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
@@ -39,12 +42,34 @@ func (h *AddCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	// fullName := fmt.Sprintf("%s/%s", username, repo)
+	fullName := fmt.Sprintf("%s/%s", username, repo)
+
+	fmt.Println(fullName)
+
+	var account bw.Account
+
+	if err := json.NewDecoder(req.Body).Decode(&account); err != nil {
+		http.Error(w, "Unable to decode request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.AddCollaborator(fullName, &account, w); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+		return
+	}
 }
 
-func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Account, w http.ResponseWriter) {
-	// tx, err :=
-	// if err := h.collaboration.AddAccount(tx, repositoryFullName, account)
+func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Account, w http.ResponseWriter) (err error) {
+	tx, err := h.db.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	_, err = h.collaboration.AddAccount(tx, fullName, account)
+
+	return err
 }
 
 func NewAddCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *AddCollaboratorHandler {
