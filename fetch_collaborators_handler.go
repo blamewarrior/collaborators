@@ -16,17 +16,24 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
-	"github.com/blamewarrior/collaborators/blamewarrior/tokens"
+	"github.com/blamewarrior/collaborators/github"
 )
 
 type FetchCollaboratorsHandler struct {
 	hostname      string
+	db            *sql.DB
 	collaboration blamewarrior.Collaboration
-	tokenClient   tokens.Client
+	githubClient  *github.Client
+
+	GithubBaseURL *url.URL
 }
 
 func (h *FetchCollaboratorsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -34,17 +41,72 @@ func (h *FetchCollaboratorsHandler) ServeHTTP(w http.ResponseWriter, req *http.R
 	username := req.URL.Query().Get(":username")
 	repo := req.URL.Query().Get(":repo")
 
+	if username == "" || repo == "" {
+		http.Error(w, "Incorrect full name", http.StatusBadRequest)
+		return
+	}
+
 	fullName := fmt.Sprintf("%s/%s", username, repo)
 
-	fmt.Println(fullName)
+	err := h.fetchCollaborators(fullName)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+	}
+
 }
 
-func NewFetchCollaboratorsHandler(hostname string, collaboration blamewarrior.Collaboration,
-	tokenClient tokens.Client) *FetchCollaboratorsHandler {
+func (h *FetchCollaboratorsHandler) fetchCollaborators(fullName string) error {
+	var ctx github.Context
+
+	ctx = github.Context{context.Background(), h.GithubBaseURL}
+
+	collaborators, err := h.githubClient.RepositoryCollaborators(ctx, fullName)
+
+	if err != nil {
+		return err
+	}
+
+	tx, err := h.db.Begin()
+
+	defer tx.Rollback()
+
+	if err != nil {
+		return err
+	}
+
+	if err := h.collaboration.CreateRepository(tx, fullName); err != nil {
+		return err
+	}
+
+	for _, collaborator := range collaborators {
+
+		account := &blamewarrior.Account{
+			Uid:         collaborator.Uid,
+			Login:       collaborator.Login,
+			Permissions: collaborator.Permissions,
+		}
+
+		_, err := h.collaboration.AddAccount(tx, fullName, account)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	tx.Commit()
+
+	return nil
+}
+
+func NewFetchCollaboratorsHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration,
+	githubClient *github.Client) *FetchCollaboratorsHandler {
 
 	return &FetchCollaboratorsHandler{
 		hostname:      hostname,
+		db:            db,
 		collaboration: collaboration,
-		tokenClient:   tokenClient,
+		githubClient:  githubClient,
 	}
 }

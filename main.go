@@ -26,6 +26,7 @@ import (
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
 	"github.com/blamewarrior/collaborators/blamewarrior/tokens"
+	"github.com/blamewarrior/collaborators/github"
 	"github.com/bmizerany/pat"
 )
 
@@ -79,14 +80,15 @@ func main() {
 
 	mux := pat.New()
 
-	tokenClient := tokens.NewTokenClient()
+	tokenClient := tokens.NewTokenClient("https://blamewarrior.com")
+	githubClient := github.NewClient(tokenClient)
+
 	collaboration := blamewarrior.NewCollaborationService()
 
-	mux.Get("/:username/:repo/collaborators/fetch", NewFetchCollaboratorsHandler("blamewarrior.com", collaboration,
-		tokenClient))
+	mux.Get("/:username/:repo/collaborators/fetch", NewFetchCollaboratorsHandler("blamewarrior.com", db, collaboration,
+		githubClient))
 	mux.Post("/:username/:repo/collaborators", NewAddCollaboratorHandler("blamewarrior.com", db, collaboration))
 	mux.Get("/:username/:repo/collaborators", NewListCollaboratorHandler("blamewarrior.com", collaboration))
-	mux.Patch("/:username/:repo/collaborators", NewEditCollaboratorHandler("blamewarrior.com", collaboration))
-	mux.Del("/:username/:repo/collaborators", NewDisconnectCollaboratorHandler("blamewarrior.com", collaboration))
-
+	mux.Put("/:username/:repo/collaborators", NewEditCollaboratorHandler("blamewarrior.com", collaboration))
+	mux.Del("/:username/:repo/collaborators/:collaborator", NewDisconnectCollaboratorHandler("blamewarrior.com", db, collaboration))
 }

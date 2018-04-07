@@ -16,7 +16,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
@@ -24,6 +26,7 @@ import (
 
 type DisconnectCollaboratorHandler struct {
 	hostname      string
+	db            *sql.DB
 	collaboration blamewarrior.Collaboration
 }
 
@@ -32,14 +35,33 @@ func (h *DisconnectCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *ht
 	username := req.URL.Query().Get(":username")
 	repo := req.URL.Query().Get(":repo")
 
+	collaboratorName := req.URL.Query().Get(":collaborator")
+
 	fullName := fmt.Sprintf("%s/%s", username, repo)
 
-	fmt.Println(fullName)
+	if username == "" || repo == "" {
+		http.Error(w, "Incorrect full name", http.StatusBadRequest)
+		return
+	}
+
+	if collaboratorName == "" {
+		http.Error(w, "Incorrect collaborator name", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.collaboration.DisconnectAccount(h.db, fullName, collaboratorName); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func NewDisconnectCollaboratorHandler(hostname string, collaboration blamewarrior.Collaboration) *DisconnectCollaboratorHandler {
+func NewDisconnectCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *DisconnectCollaboratorHandler {
 	return &DisconnectCollaboratorHandler{
 		hostname:      hostname,
+		db:            db,
 		collaboration: collaboration,
 	}
 }

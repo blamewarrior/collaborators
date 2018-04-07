@@ -44,8 +44,6 @@ func (h *AddCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 
 	fullName := fmt.Sprintf("%s/%s", username, repo)
 
-	fmt.Println(fullName)
-
 	var account bw.Account
 
 	if err := json.NewDecoder(req.Body).Decode(&account); err != nil {
@@ -58,6 +56,8 @@ func (h *AddCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
 		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Account, w http.ResponseWriter) (err error) {
