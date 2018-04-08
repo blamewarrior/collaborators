@@ -16,7 +16,10 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
@@ -24,6 +27,7 @@ import (
 
 type ListCollaboratorHandler struct {
 	hostname      string
+	db            *sql.DB
 	collaboration blamewarrior.Collaboration
 }
 
@@ -33,12 +37,33 @@ func (h *ListCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 	repo := req.URL.Query().Get(":repo")
 
 	fullName := fmt.Sprintf("%s/%s", username, repo)
-	fmt.Println(fullName)
+
+	if username == "" || repo == "" {
+		http.Error(w, "Incorrect full name", http.StatusBadRequest)
+		return
+	}
+
+	var accounts []blamewarrior.Account
+
+	accounts, err := h.collaboration.ListAccounts(h.db, fullName)
+
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(accounts); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+		return
+	}
 }
 
-func NewListCollaboratorHandler(hostname string, collaboration blamewarrior.Collaboration) *ListCollaboratorHandler {
+func NewListCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *ListCollaboratorHandler {
 	return &ListCollaboratorHandler{
 		hostname:      hostname,
+		db:            db,
 		collaboration: collaboration,
 	}
 }

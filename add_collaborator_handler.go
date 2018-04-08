@@ -51,7 +51,7 @@ func (h *AddCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	if err := h.AddCollaborator(fullName, &account, w); err != nil {
+	if err := h.AddCollaborator(fullName, &account); err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
 		return
@@ -60,7 +60,7 @@ func (h *AddCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Account, w http.ResponseWriter) (err error) {
+func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Account) (err error) {
 	tx, err := h.db.Begin()
 
 	if err != nil {

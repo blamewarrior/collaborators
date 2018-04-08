@@ -88,7 +88,7 @@ func main() {
 	mux.Get("/:username/:repo/collaborators/fetch", NewFetchCollaboratorsHandler("blamewarrior.com", db, collaboration,
 		githubClient))
 	mux.Post("/:username/:repo/collaborators", NewAddCollaboratorHandler("blamewarrior.com", db, collaboration))
-	mux.Get("/:username/:repo/collaborators", NewListCollaboratorHandler("blamewarrior.com", collaboration))
-	mux.Put("/:username/:repo/collaborators", NewEditCollaboratorHandler("blamewarrior.com", collaboration))
+	mux.Get("/:username/:repo/collaborators", NewListCollaboratorHandler("blamewarrior.com", db, collaboration))
+	mux.Put("/:username/:repo/collaborators", NewEditCollaboratorHandler("blamewarrior.com", db, collaboration))
 	mux.Del("/:username/:repo/collaborators/:collaborator", NewDisconnectCollaboratorHandler("blamewarrior.com", db, collaboration))
 }

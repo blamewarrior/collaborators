@@ -16,6 +16,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -24,6 +25,7 @@ import (
 
 type EditCollaboratorHandler struct {
 	hostname      string
+	db            *sql.DB
 	collaboration blamewarrior.Collaboration
 }
 
@@ -37,9 +39,10 @@ func (h *EditCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 	fmt.Println(fullName)
 }
 
-func NewEditCollaboratorHandler(hostname string, collaboration blamewarrior.Collaboration) *EditCollaboratorHandler {
+func NewEditCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *EditCollaboratorHandler {
 	return &EditCollaboratorHandler{
 		hostname:      hostname,
+		db:            db,
 		collaboration: collaboration,
 	}
 }
