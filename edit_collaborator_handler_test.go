@@ -7,15 +7,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/blamewarrior/collaborators/blamewarrior"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/blamewarrior/collaborators/blamewarrior"
 
 	main "github.com/blamewarrior/collaborators"
 )
 
-func TestAddCollaboratorHandler(t *testing.T) {
+func TestEditCollaboratorHandler(t *testing.T) {
 	results := []struct {
 		Owner        string
 		Name         string
@@ -30,15 +30,14 @@ func TestAddCollaboratorHandler(t *testing.T) {
 		},
 		{
 			Owner:        "blamewarrior",
-			Name:         "test_add_account",
-			ResponseCode: http.StatusCreated,
+			Name:         "test_edit_account",
+			ResponseCode: http.StatusOK,
 			ResponseBody: "",
 		},
 	}
 
 	for _, result := range results {
 		db, teardown := setupTestDBConn()
-
 		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
 		require.NoError(t, err)
 
@@ -51,7 +50,7 @@ func TestAddCollaboratorHandler(t *testing.T) {
 
 		collaboration := blamewarrior.NewCollaborationService()
 
-		handler := main.NewAddCollaboratorHandler("blamewarrior.com", db, collaboration)
+		handler := main.NewEditCollaboratorHandler("blamewarrior.com", db, collaboration)
 		handler.ServeHTTP(w, req)
 
 		assert.Equal(t, result.ResponseCode, w.Code)
@@ -62,14 +61,14 @@ func TestAddCollaboratorHandler(t *testing.T) {
 }
 
 const (
-	addCollaboratorRequestBody = `
-		{
-			"uid": 1345,
-			"login": "blamewarrior",
-			"permissions": {
-				"admin": true
-			}
-		}
+	editCollaboratorRequestBody = `
+    {
+      "uid": 1345,
+      "login": "blamewarrior",
+      "permissions": {
+        "admin": false
+      }
+    }
 
-	`
+  `
 )

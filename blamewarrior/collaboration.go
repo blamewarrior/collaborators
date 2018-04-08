@@ -59,7 +59,7 @@ type Collaboration interface {
 	CreateRepository(sqlRunner SQLRunner, repositoryFullName string) error
 	ListAccounts(sqlRunner SQLRunner, repositoryFullName string) ([]Account, error)
 	AddAccount(tx *sql.Tx, repositoryFullName string, account *Account) (*Account, error)
-	EditAccount(sqlRunner SQLRunner, account *Account) error
+	EditAccount(sqlRunner SQLRunner, repositoryFullName string, account *Account) error
 	DisconnectAccount(sqlRunner SQLRunner, repositoryFullName, login string) error
 }
 
@@ -137,9 +137,9 @@ func (service *CollaborationService) AddAccount(tx *sql.Tx, repositoryFullName s
 	return account, nil
 }
 
-func (service *CollaborationService) EditAccount(sqlRunner SQLRunner, account *Account) error {
+func (service *CollaborationService) EditAccount(sqlRunner SQLRunner, repositoryFullName string, account *Account) error {
 	_, err := sqlRunner.Exec(EditAccountQuery,
-		account.Id,
+		repositoryFullName,
 		account.Uid,
 		account.Login,
 		account.Permissions,
@@ -180,7 +180,11 @@ const (
   `
 
 	EditAccountQuery = `
-      UPDATE accounts SET uid=$2, login=$3, permissions=$4 WHERE id=$1;
+    UPDATE accounts SET uid=$2, login=$3, permissions=$4 WHERE id = (
+      SELECT account_id FROM collaboration
+      INNER JOIN repositories ON collaboration.repository_id = repositories.id
+      WHERE full_name = $1
+    );
    `
 
 	DisconnectAccountQuery = `

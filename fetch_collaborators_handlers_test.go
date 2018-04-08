@@ -51,6 +51,9 @@ func TestFetchCollaboratorHandler(t *testing.T) {
 	for _, result := range results {
 		db, teardownDB := setupTestDBConn()
 
+		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
+		require.NoError(t, err)
+
 		req, err := http.NewRequest("POST", "/repositories?:username="+result.Owner+"&:repo="+result.Name, bytes.NewBufferString(addCollaboratorRequestBody))
 		require.NoError(t, err)
 
@@ -97,6 +100,5 @@ func TestFetchCollaboratorHandler(t *testing.T) {
 
 		teardownDB()
 		teardownAPIServer()
-
 	}
 }

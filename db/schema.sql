@@ -8,8 +8,7 @@ CREATE TABLE accounts (
     id SERIAL primary key,
     uid varchar(255),
     login varchar(255),
-    permissions jsonb,
-    UNIQUE (login)
+    permissions jsonb
 );
 
 
@@ -18,3 +17,4 @@ CREATE TABLE collaboration (
     account_id integer NOT NULL REFERENCES accounts(id),
     UNIQUE (repository_id, account_id)
 );
+

@@ -67,9 +67,17 @@ func (h *AddCollaboratorHandler) AddCollaborator(fullName string, account *bw.Ac
 		return err
 	}
 
+	defer tx.Rollback()
+
 	_, err = h.collaboration.AddAccount(tx, fullName, account)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	tx.Commit()
+
+	return nil
 }
 
 func NewAddCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *AddCollaboratorHandler {

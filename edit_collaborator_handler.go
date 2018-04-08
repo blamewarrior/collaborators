@@ -17,7 +17,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/blamewarrior/collaborators/blamewarrior"
@@ -36,7 +38,24 @@ func (h *EditCollaboratorHandler) ServeHTTP(w http.ResponseWriter, req *http.Req
 
 	fullName := fmt.Sprintf("%s/%s", username, repo)
 
-	fmt.Println(fullName)
+	if username == "" || repo == "" {
+		http.Error(w, "Incorrect full name", http.StatusBadRequest)
+		return
+	}
+
+	var account blamewarrior.Account
+
+	if err := json.NewDecoder(req.Body).Decode(&account); err != nil {
+		http.Error(w, "Unable to decode request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.collaboration.EditAccount(h.db, fullName, &account); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("%s\t%s\t%v\t%s", "POST", req.RequestURI, http.StatusInternalServerError, err)
+		return
+	}
+
 }
 
 func NewEditCollaboratorHandler(hostname string, db *sql.DB, collaboration blamewarrior.Collaboration) *EditCollaboratorHandler {

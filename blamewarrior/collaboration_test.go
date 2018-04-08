@@ -50,6 +50,7 @@ func TestRepositoryAddAccount(t *testing.T) {
 		db, teardown := setup()
 
 		var repositoryId int
+
 		err := db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&repositoryId)
 		require.NoError(t, err)
 
@@ -68,6 +69,7 @@ func TestRepositoryAddAccount(t *testing.T) {
 		err = db.QueryRow("SELECT account_id FROM collaboration").Scan(&obtainedAccountId)
 		require.NoError(t, err)
 		require.Equal(t, account.Id, obtainedAccountId)
+
 		teardown()
 	}
 }
@@ -153,14 +155,14 @@ func TestRepositoryEditAccount(t *testing.T) {
 		var accountId int
 		_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
 		require.NoError(t, err)
-		err = db.QueryRow(blamewarrior.AddAccountQuery, 123, "octocat", "{}").Scan(&accountId)
+		err = db.QueryRow(blamewarrior.AddAccountQuery, result.Account.Uid, result.Account.Login, "{}").Scan(&accountId)
 		require.NoError(t, err)
 		_, err = db.Exec(blamewarrior.BuildCollaborationQuery, "blamewarrior/repos", accountId)
 		require.NoError(t, err)
 
 		account := result.Account
 		repositoriesService := blamewarrior.NewCollaborationService()
-		err = repositoriesService.EditAccount(db, account)
+		err = repositoriesService.EditAccount(db, "blamewarrior/repos", account)
 		assert.Equal(t, result.Err, err)
 		teardown()
 	}
