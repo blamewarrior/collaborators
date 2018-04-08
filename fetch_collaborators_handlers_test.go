@@ -35,7 +35,7 @@ func TestFetchCollaboratorHandler(t *testing.T) {
 		},
 		{
 			Owner:        "blamewarrior",
-			Name:         "test",
+			Name:         "test_fetch_collaborator",
 			ResponseCode: http.StatusOK,
 			ResponseBody: "",
 			Collaborators: []blamewarrior.Account{
@@ -51,10 +51,6 @@ func TestFetchCollaboratorHandler(t *testing.T) {
 	for _, result := range results {
 		db, teardownDB := setupTestDBConn()
 
-		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
-
-		require.NoError(t, err)
-
 		req, err := http.NewRequest("POST", "/repositories?:username="+result.Owner+"&:repo="+result.Name, bytes.NewBufferString(addCollaboratorRequestBody))
 		require.NoError(t, err)
 
@@ -69,7 +65,7 @@ func TestFetchCollaboratorHandler(t *testing.T) {
 			w.Write([]byte(`{"token": "test_token"}`))
 		})
 
-		mux.HandleFunc("/repos/blamewarrior/test/collaborators", func(w http.ResponseWriter, req *http.Request) {
+		mux.HandleFunc("/repos/blamewarrior/test_fetch_collaborator/collaborators", func(w http.ResponseWriter, req *http.Request) {
 
 			assert.Equal(t, "Bearer test_token", req.Header.Get("Authorization"))
 

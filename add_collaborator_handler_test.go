@@ -30,7 +30,7 @@ func TestAddCollaboratorHandler(t *testing.T) {
 		},
 		{
 			Owner:        "blamewarrior",
-			Name:         "test",
+			Name:         "test_add_account_created",
 			ResponseCode: http.StatusCreated,
 			ResponseBody: "",
 		},

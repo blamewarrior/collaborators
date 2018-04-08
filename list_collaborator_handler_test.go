@@ -18,18 +18,21 @@ func TestListCollaboratorHandler(t *testing.T) {
 	results := []struct {
 		Owner        string
 		Name         string
+		AccountLogin string
 		ResponseCode int
 		ResponseBody string
 	}{
 		{
 			Owner:        "",
 			Name:         "",
+			AccountLogin: "",
 			ResponseCode: http.StatusBadRequest,
 			ResponseBody: "Incorrect full name\n",
 		},
 		{
 			Owner:        "blamewarrior",
-			Name:         "test",
+			Name:         "test_list_handler",
+			AccountLogin: "octocat",
 			ResponseCode: http.StatusOK,
 			ResponseBody: "[{\"uid\":123,\"login\":\"octocat\",\"permissions\":{\"admin\":true}}]\n",
 		},
@@ -38,14 +41,10 @@ func TestListCollaboratorHandler(t *testing.T) {
 	for _, result := range results {
 		db, teardown := setupTestDBConn()
 
-		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts;")
-
-		require.NoError(t, err)
-
 		var accountId int
-		_, err = db.Exec(blamewarrior.CreateRepositoryQuery, fmt.Sprintf("%s/%s", result.Owner, result.Name))
+		_, err := db.Exec(blamewarrior.CreateRepositoryQuery, fmt.Sprintf("%s/%s", result.Owner, result.Name))
 		require.NoError(t, err)
-		err = db.QueryRow(blamewarrior.AddAccountQuery, 123, "octocat", `{"admin": true}`).Scan(&accountId)
+		err = db.QueryRow(blamewarrior.AddAccountQuery, 123, result.AccountLogin, `{"admin": true}`).Scan(&accountId)
 		require.NoError(t, err)
 		_, err = db.Exec(blamewarrior.BuildCollaborationQuery, fmt.Sprintf("%s/%s", result.Owner, result.Name), accountId)
 		require.NoError(t, err)
