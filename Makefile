@@ -15,7 +15,7 @@ LDFLAGS := -X 'main.version=$(VERSION)' \
 PACKAGES := $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 test: setupdb
 	@echo "Running tests..."
-	DB_USER=postgres DB_NAME=bw_collaborators_test go test $(PACKAGES)
+	DB_USER=postgres DB_NAME=bw_collaborators_test go test $(PACKAGES) -p 1
 
 benchmark:
 	@echo "Running benchmarks..."

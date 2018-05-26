@@ -49,9 +49,12 @@ func TestRepositoryAddAccount(t *testing.T) {
 	for _, result := range results {
 		db, teardown := setup()
 
+		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
+		require.NoError(t, err)
+
 		var repositoryId int
 
-		err := db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&repositoryId)
+		err = db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&repositoryId)
 		require.NoError(t, err)
 
 		account := result.Account
@@ -75,11 +78,16 @@ func TestRepositoryAddAccount(t *testing.T) {
 }
 
 func TestRepositoryListAccount(t *testing.T) {
+
 	db, teardown := setup()
+
+	_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
+	require.NoError(t, err)
+
 	defer teardown()
 
 	var accountId int
-	_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
+	_, err = db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
 	require.NoError(t, err)
 	err = db.QueryRow(blamewarrior.AddAccountQuery, 123, "octocat", `{"admin": true}`).Scan(&accountId)
 	require.NoError(t, err)
@@ -94,12 +102,17 @@ func TestRepositoryListAccount(t *testing.T) {
 }
 
 func TestRepositoryDisconnectAccount(t *testing.T) {
+
 	db, teardown := setup()
+
+	_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
+	require.NoError(t, err)
+
 	defer teardown()
 	var blamewarriorReposId, blamewarriorHooksId int
 	var octocatId, octocatTstId int
 
-	err := db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&blamewarriorReposId)
+	err = db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos").Scan(&blamewarriorReposId)
 	require.NoError(t, err)
 	err = db.QueryRow(blamewarrior.CreateRepositoryQuery, "blamewarrior/hooks").Scan(&blamewarriorHooksId)
 	require.NoError(t, err)
@@ -152,8 +165,11 @@ func TestRepositoryEditAccount(t *testing.T) {
 	for _, result := range results {
 		db, teardown := setup()
 
+		_, err := db.Exec("TRUNCATE repositories, collaboration, accounts")
+		require.NoError(t, err)
+
 		var accountId int
-		_, err := db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
+		_, err = db.Exec(blamewarrior.CreateRepositoryQuery, "blamewarrior/repos")
 		require.NoError(t, err)
 		err = db.QueryRow(blamewarrior.AddAccountQuery, result.Account.Uid, result.Account.Login, "{}").Scan(&accountId)
 		require.NoError(t, err)
