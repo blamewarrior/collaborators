@@ -18,8 +18,11 @@
 */
 package blamewarrior
 
-// Account represents GitHub user account stored in BlameWarrior database.
-type Account struct {
-	// Nickname contains GitHub user login.
-	Nickname string
+import "database/sql"
+
+type SQLRunner interface {
+	Query(string, ...interface{}) (*sql.Rows, error)
+	QueryRow(string, ...interface{}) *sql.Row
+	Prepare(string) (*sql.Stmt, error)
+	Exec(string, ...interface{}) (sql.Result, error)
 }

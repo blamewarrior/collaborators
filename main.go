@@ -21,7 +21,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/blamewarrior/collaborators/blamewarrior"
+	"github.com/blamewarrior/collaborators/blamewarrior/tokens"
+	"github.com/blamewarrior/collaborators/github"
+	"github.com/bmizerany/pat"
 )
 
 var (
@@ -55,4 +61,34 @@ func main() {
 		os.Exit(0)
 	}
 
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		log.Fatal("missing test database name (expected to be passed via ENV['DB_NAME'])")
+	}
+
+	opts := &blamewarrior.DatabaseOptions{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+	}
+
+	db, err := blamewarrior.ConnectDatabase(dbName, opts)
+	if err != nil {
+		log.Fatalf("failed to establish connection with test db %s using connection string %s: %s", dbName, opts.ConnectionString(), err)
+	}
+
+	mux := pat.New()
+
+	tokenClient := tokens.NewTokenClient("https://blamewarrior.com")
+	githubClient := github.NewClient(tokenClient)
+
+	collaboration := blamewarrior.NewCollaborationService()
+
+	mux.Get("/:username/:repo/collaborators/fetch", NewFetchCollaboratorsHandler("blamewarrior.com", db, collaboration,
+		githubClient))
+	mux.Post("/:username/:repo/collaborators", NewAddCollaboratorHandler("blamewarrior.com", db, collaboration))
+	mux.Get("/:username/:repo/collaborators", NewListCollaboratorHandler("blamewarrior.com", db, collaboration))
+	mux.Put("/:username/:repo/collaborators", NewEditCollaboratorHandler("blamewarrior.com", db, collaboration))
+	mux.Del("/:username/:repo/collaborators/:collaborator", NewDisconnectCollaboratorHandler("blamewarrior.com", db, collaboration))
 }
